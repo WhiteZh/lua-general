@@ -1,18 +1,20 @@
-require 'lua-general/List'
+if not package.loaded['lua-general/Object'] then require 'lua-general/Object' end
+if not package.loaded['lua-general/List'] then require 'lua-general/List' end
 
 range = function(...)
 	local paramCount = select('#', ...)
-	local start = 1
-	local stop = 1
-	local step = 1
+	local start, stop, step
 
 	if paramCount == 0 then
 		return
 	elseif paramCount == 1 then
+		start = 1
 		stop = select('1', ...)
+		step = 1
 	elseif paramCount == 2 then
 		start = select('1', ...)
 		stop = select('2', ...)
+		step = start < stop and 1 or -1
 	else
 		start = select('1', ...)
 		stop = select('2', ...)
@@ -27,7 +29,6 @@ range = function(...)
 	local up = step > 0
 	return function()
 		iter = iter + step
-		print(string.format('%.64f', iter))
 		if up then
 			if iter > stop then return nil end
 			return iter
