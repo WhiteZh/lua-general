@@ -15,10 +15,12 @@ List = {
 			end,
 			__mul = function(self, times)
 				if type(times) ~= 'number' then
-					error('must be a number!')
+					-- error('must be a number!')
+					return
 				end
 				if times <= 0 or times % 1 ~= 0 then
-					error('whole number onlyl!')
+					-- error('whole number onlyl!')
+					return
 				end
 				local result = self:new()
 				for _ in range(times) do
@@ -29,8 +31,13 @@ List = {
 		}
 		return setmetatable(o or {}, metatable)
 	end,
-	create = function(self, iter)
-
+	create = function(self, iterFunction, modifyFunction)
+		modifyFunction = modifyFunction or function(value) return value end
+		local result = self:new()
+		for value in iterFunction() do
+			result = result + modifyFunction(value)
+		end
+		return result
 	end,
 	clone = function(self)
 		if not self then return end
@@ -50,7 +57,7 @@ List = {
 		return result
 	end,
 	append = function(self, value, time, index)
-		if not self or not value then return end
+		if not self or value == nil then return end
 		index = index or #self + 1
 		time = time or 1
 		for i=#self+time,#self+1,-1 do
@@ -74,7 +81,7 @@ List = {
 }
 
 range = function(start, stop, step)
-	if step == 0 then return function() return nil  end end
+	if step == 0 then return function() return end end
 	step = step or 1
 	if not stop then
 		stop = start
