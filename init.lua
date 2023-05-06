@@ -87,7 +87,7 @@ end
 
 rerequire = function(name)
 	package.loaded[name] = nil
-	require(name)
+	return require(name)
 end
 
 os.clear = function()
