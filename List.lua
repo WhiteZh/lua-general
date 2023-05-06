@@ -1,6 +1,3 @@
-if not package.loaded['lua-general'] then require 'lua-general' end
-if not package.loaded['lua-general/Object'] then require 'lua-general/Object'end
-
 List = Object:new({
 	new = function(self, o)
 		if not self then return end

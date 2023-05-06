@@ -1,5 +1,5 @@
-if not package.loaded['lua-general/Object'] then require 'lua-general/Object' end
-if not package.loaded['lua-general/List'] then require 'lua-general/List' end
+require 'lua-general/Object'
+require 'lua-general/List'
 
 range = function(...)
 	local paramCount = select('#', ...)
