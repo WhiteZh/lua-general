@@ -1,96 +1,44 @@
-List = {
-	new = function(self, o)
-		if not self then return end
-		local metatable = {
-			__index = self,
-			__add = function(self, value)
-				if type(value) ~= 'table' then
-					value = { value }
-				end
-				local result = self:clone()
-				for i=1,#value do
-					result:append(value[i])
-				end
-				return result
-			end,
-			__mul = function(self, times)
-				if type(times) ~= 'number' then
-					-- error('must be a number!')
-					return
-				end
-				if times <= 0 or times % 1 ~= 0 then
-					-- error('whole number onlyl!')
-					return
-				end
-				local result = self:new()
-				for _ in range(times) do
-					result = result + self
-				end
-				return result
-			end,
-		}
-		return setmetatable(o or {}, metatable)
-	end,
-	create = function(self, iterFunction, modifyFunction)
-		modifyFunction = modifyFunction or function(value) return value end
-		local result = self:new()
-		for value in iterFunction() do
-			result = result + modifyFunction(value)
-		end
-		return result
-	end,
-	clone = function(self)
-		if not self then return end
-		local result = self:new()
-		for i,v in ipairs(self) do
-			result:append(v)
-		end
-		return result
-	end,
-	show = function(self)
-		if not self then return end
-		local result = '[ '
-		for i,v in ipairs(self) do
-			result = result..string.format('%s , ',tostring(v))
-		end
-		result = string.sub(result,1,string.len(result)-3)..' ]'
-		return result
-	end,
-	append = function(self, value, time, index)
-		if not self or value == nil then return end
-		index = index or #self + 1
-		time = time or 1
-		for i=#self+time,#self+1,-1 do
-			self[i] = self[i - time]
-		end
-		for i=index,index+time-1 do
-			self[i] = value
-		end
-	end,
-	remove = function(self, index, length)
-		if not self then return end
-		index = index or #self
-		if length == nil then
-			length, index = index, #self
-			index = index - length + 1
-		end
-		for i=index,#self do
-			self[i] = self[i+length]
-		end
-	end,
-}
+require 'lua-general/List'
 
-range = function(start, stop, step)
-	if step == 0 then return function() return end end
-	step = step or 1
-	if not stop then
-		stop = start
-		start = 1
+range = function(...)
+	local paramCount = select('#', ...)
+	local start = 1
+	local stop = 1
+	local step = 1
+
+	if paramCount == 0 then
+		return
+	elseif paramCount == 1 then
+		stop = select('1', ...)
+	elseif paramCount == 2 then
+		start = select('1', ...)
+		stop = select('2', ...)
+	else
+		start = select('1', ...)
+		stop = select('2', ...)
+		step = select('3', ...)
 	end
+
 	local iter = start - step
+	local up = step > 0
 	return function()
 		iter = iter + step
-		return (iter - stop) * step <= 0 and iter or nil
+		print(string.format('%.64f', iter))
+		if up then
+			if iter > stop then return nil end
+			return iter
+		else
+			if iter < stop then return nil end
+			return iter
+		end
+	end
+end
+
+eachs = function(list)
+	local index = 0
+	return function()
+		index = index + 1
+		return list[index]
 	end
 end
 
