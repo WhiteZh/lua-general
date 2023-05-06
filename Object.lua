@@ -1,4 +1,5 @@
-Object = {
+Object = { className = 'Object',
+
     new = function(self, o)
         if not self then return end
         local metatable = {

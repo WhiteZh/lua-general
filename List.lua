@@ -1,4 +1,5 @@
-List = Object:new({
+List = Object:new({ className = 'List',
+
 	new = function(self, o)
 		if not self then return end
 		local metatable = {
