@@ -71,17 +71,17 @@ List = {
 	end,
 }
 
-range = function(s,e,g)
-	if g == 0 then return function() return nil  end end
-	g = g or 1
-	if not e then
-		e = s
-		s = 1
+range = function(start, stop, step)
+	if step == 0 then return function() return nil  end end
+	step = step or 1
+	if not stop then
+		stop = start
+		start = 1
 	end
-	local iter = s - g
+	local iter = start - step
 	return function()
-		iter = iter + g
-		return (iter - e) * g <= 0 and iter or nil
+		iter = iter + step
+		return (iter - stop) * step <= 0 and iter or nil
 	end
 end
 
