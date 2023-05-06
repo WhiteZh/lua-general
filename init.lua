@@ -1,24 +1,47 @@
 List = {
 	new = function(self, o)
-		self.__index = self
-		return setmetatable(o or {}, self)
+		if not self then return end
+		local metatable = {
+			__index = self,
+			__add = function(self, value)
+				if type(value) ~= 'table' then
+					value = { value }
+				end
+				local result = self:clone()
+				for i=1,#value do
+					result:append(value[i])
+				end
+				return result
+			end,
+			__mul = function(self, times)
+				if type(times) ~= 'number' then
+					error('must be a number!')
+				end
+				if times <= 0 or times % 1 ~= 0 then
+					error('whole number onlyl!')
+				end
+				local result = self:new()
+				for _ in range(times) do
+					result = result + self
+				end
+				return result
+			end,
+		}
+		return setmetatable(o or {}, metatable)
 	end,
-	copy = function(self)
-		local tmp ={}
-		for i,v in ipairs(self) do
-			table.insert(tmp, #tmp + 1, v)
-		end
-		return tmp
+	create = function(self, iter)
+
 	end,
-	set = function(self, target)
+	clone = function(self)
+		if not self then return end
+		local result = self:new()
 		for i,v in ipairs(self) do
-			self[i] = nil
+			result:append(v)
 		end
-		for i=1,#target do
-			self[i] = target[i]
-		end
+		return result
 	end,
 	show = function(self)
+		if not self then return end
 		local result = '[ '
 		for i,v in ipairs(self) do
 			result = result..string.format('%s , ',tostring(v))
@@ -27,6 +50,7 @@ List = {
 		return result
 	end,
 	append = function(self, value, time, index)
+		if not self or not value then return end
 		index = index or #self + 1
 		time = time or 1
 		for i=#self+time,#self+1,-1 do
@@ -37,6 +61,7 @@ List = {
 		end
 	end,
 	remove = function(self, index, length)
+		if not self then return end
 		index = index or #self
 		if length == nil then
 			length, index = index, #self
@@ -45,29 +70,6 @@ List = {
 		for i=index,#self do
 			self[i] = self[i+length]
 		end
-	end,
-	__add = function(this, that)
-		if type(that) ~= 'table' then
-			that = {that}
-		end
-		local result = List.copy(this)
-		for i=1,#that do
-			table.insert(result, #result + 1, that[i])
-		end
-		return result
-	end,
-	__mul = function(this, that)
-		if type(that) ~= 'number' then
-			error('must be a number!')
-		end
-		if that <= 0 or that % 1 ~= 0 then
-			error('whole number onlyl!')
-		end
-		local result = {}
-		for i=1,that do
-			result = List.__add(result, this)
-		end
-		return result
 	end,
 }
 
