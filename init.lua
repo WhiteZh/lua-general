@@ -19,6 +19,10 @@ range = function(...)
 		step = select('3', ...)
 	end
 
+	start = math.floor(start)
+	stop = math.floor(stop)
+	step = math.floor(step)
+
 	local iter = start - step
 	local up = step > 0
 	return function()
