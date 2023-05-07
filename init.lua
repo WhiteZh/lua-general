@@ -96,7 +96,9 @@ List = {
 	__className = 'List',
 	new = function(self, o)
 		if not self then return end
-		o = Object:new(o or {})
+		o = o or {}
+		if type(o) ~= 'table' then o = { o } end
+		o = Object:new(o)
 		return addmetatable(o, self, true)
 	end,
 	create = function(self, iterFunction, modifyFunction)
