@@ -78,8 +78,7 @@ addmetatable = function(_table, metatable, overwrite)
 end
 
 
-Object = {}
-table.merge(Object, {
+Object = {
 	__className = 'Object',
 	__index = Object,
 	new = function(self, o)
@@ -91,12 +90,10 @@ table.merge(Object, {
 	__tostring = function(self)
 		return self.__className..': '..self.__uniqueID
 	end,
-})
+} Object.__index = Object;
 
-List = {}
-List = table.merge(List, {
+List = {
 	__className = 'List',
-	__index = List,
 	new = function(self, o)
 		if not self then return end
 		o = Object:new(o or {})
@@ -187,4 +184,7 @@ List = table.merge(List, {
 		local step = select('3', ...) or 1
 		return List:create(range(start, stop, step), function(v) return self[v] end)
 	end,
-})
+	sort = function(self, comp)
+		return table.sort(self, comp)
+	end
+} List.__index = List;
