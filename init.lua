@@ -78,6 +78,16 @@ addmetatable = function(_table, metatable, overwrite)
 end
 
 
+addmetatable(table, {__tostring = function() return 'Package: table' end}, true)
+addmetatable(debug, {__tostring = function() return 'Package: debug' end}, true)
+addmetatable(os, {__tostring = function() return 'Package: os' end}, true)
+addmetatable(io, {__tostring = function() return 'Package: io' end}, true)
+addmetatable(math, {__tostring = function() return 'Package: math' end}, true)
+addmetatable(string, {__tostring = function() return 'Package: string' end}, true)
+addmetatable(package, {__tostring = function() return 'Package: package' end}, true)
+addmetatable(coroutine, {__tostring = function() return 'Package: coroutine' end}, true)
+
+
 Object = {
 	__className = 'Object',
 	__index = Object,
@@ -90,7 +100,7 @@ Object = {
 	__tostring = function(self)
 		return self.__className..': '..self.__uniqueID
 	end,
-} Object.__index = Object;
+} Object.__index = Object; setmetatable(Object, {__tostring = function() return 'Class: Object' end});
 
 List = {
 	__className = 'List',
@@ -190,4 +200,4 @@ List = {
 		table.sort(self, comp)
 		return self
 	end
-} List.__index = List;
+} List.__index = List; setmetatable(List, {__tostring = function() return 'Class: List' end})
