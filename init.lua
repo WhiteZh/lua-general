@@ -181,6 +181,7 @@ List = {
 			self[i] = value[vi]
 			vi = vi + 1
 		end
+		return self
 	end,
 	remove = function(self, index, length)
 		if not self then return end
@@ -189,6 +190,7 @@ List = {
 		for i in range(index, #self) do
 			self[i] = self[i+length]
 		end
+		return self
 	end,
 	inter = function(self, ...)
 		local start = select('1', ...) or 1
