@@ -4,12 +4,10 @@ statistic = {}
 
 statistic.mean = function(list)
     local sum = 0
-    local count
-    for i, v in pairs(list) do
+    for v in eachs(list) do
         sum = sum + v
-        count = i
     end
-    return sum / count
+    return sum / #list
 end
 
 statistic.quantile = function(list, q)
@@ -107,8 +105,8 @@ statistic.ssd = function(list)
 end
 
 
-statistic.showl = function(list)
-    List:new(list):show()
+statistic.show = function(list)
+    print(List.show(list))
 end
 
 statistic.anal = function(list)
