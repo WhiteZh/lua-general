@@ -185,6 +185,7 @@ List = {
 		return List:create(range(start, stop, step), function(v) return self[v] end)
 	end,
 	sort = function(self, comp)
-		return table.sort(self, comp)
+		table.sort(self, comp)
+		return self
 	end
 } List.__index = List;
