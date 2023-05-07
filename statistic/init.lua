@@ -1,4 +1,4 @@
-require 'lua-general'
+require 'lua-general/init'
 
 statistic = {}
 
@@ -45,37 +45,33 @@ statistic.q3 = function(list)
 end
 
 statistic.mode = function(list)
-    local ret = {}
-    local ret_ptr = 0
-    local current = nil
-    local max = 0
-    for _,v in ipairs(list) do
-        if current ~= v then
-            if ret_ptr ~= 0 and ret[ret_ptr].value > max then
-                max = ret[ret_ptr].value
+    local list = List:new(list):sort()
+    local modes = List:new()
+    local max = 2
+    local count = 0
+    local crt
+    for v in eachs(list) do
+        if crt ~= v then
+            if count > max then
+                modes = List:new()
+                max = count
             end
-            current = v
-            ret_ptr = ret_ptr + 1
-            ret[ret_ptr] = { key = v, value = 1 }
-        else
-            ret[ret_ptr].value = ret[ret_ptr].value + 1
+            if count == max then
+                modes:append(crt)
+            end
+            crt = v
+            count = 0
         end
+        count = count + 1
     end
-
-    local ret2 = {}
-    for i, v in ipairs(ret) do
-        if v.value == max then
-            table.insert(ret2, 1, v.key)
-        end
+    if count > max then
+        modes = List:new()
+        max = count
     end
-
-    ret = ret2
-
-    if #ret == #list then
-        ret = {}
+    if count == max then
+        modes:append(crt)
     end
-
-    return List:new(ret)
+    return #modes * max == #list and List:new() or modes
 end
 
 statistic.ir = function(list)
@@ -119,6 +115,7 @@ statistic.anal = function(list)
     for _,each in ipairs(modes:inter(#modes-1)) do
         io.write(each..', ')
     end
+    print(modes[#modes])
     print(string.format('IR: %f', (statistic.ir(list))))
     print(string.format('PSD: %f', (statistic.psd(list))))
     print(string.format('SSD: %f', (statistic.ssd(list))))
