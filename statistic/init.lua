@@ -110,12 +110,7 @@ statistic.anal = function(list)
     print(string.format('Median: %f', (statistic.median(list))))
     print(string.format('Q1: %f', (statistic.q1(list))))
     print(string.format('Q3: %f', (statistic.q3(list))))
-    io.write(string.format('Mode: '))
-    local modes = statistic.mode(list)
-    for _,each in ipairs(modes:inter(#modes-1)) do
-        io.write(each..', ')
-    end
-    print(modes[#modes])
+    print(string.format('Mode(s): '..statistic.mode(list):show()))
     print(string.format('IR: %f', (statistic.ir(list))))
     print(string.format('PSD: %f', (statistic.psd(list))))
     print(string.format('SSD: %f', (statistic.ssd(list))))
