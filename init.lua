@@ -114,7 +114,7 @@ addmetatable(coroutine, {__tostring = function() return 'Package: coroutine' end
 
 Object = {
 	__attributeName = 'Object',
-	new = function(self, o)
+	assign = function(self, o)
 		if not self then return end
 		o = o or {}
 		o.__uniqueID = o.__uniqueID or string.sub(tostring(o), 8)
@@ -127,17 +127,17 @@ Object = {
 
 List = {
 	__attributeName = 'List',
-	new = function(self, o)
+	assign = function(self, o)
 		if not self then return end
 		o = o or {}
 		if type(o) ~= 'table' then o = { o } end
-		o = Object:new(o)
+		o = Object:assign(o)
 		return addmetatable(o, self, true)
 	end,
 	create = function(self, iterFunction, modifyFunction)
 		if not self then return end
 		modifyFunction = modifyFunction or function(value) return value end
-		local result = self:new()
+		local result = self:assign()
 		local value = iterFunction()
 		while value ~= nil do
 			result:append(modifyFunction(value))
@@ -164,7 +164,7 @@ List = {
 			-- error('whole number onlyl!')
 			return
 		end
-		local result = List:new()
+		local result = List:assign()
 		for _ in range(times) do
 			result = result + self
 		end
@@ -175,7 +175,7 @@ List = {
 	end,
 	clone = function(self)
 		if not self then return end
-		local result = List:new()
+		local result = List:assign()
 		for v in eachs(self) do
 			result:append(v)
 		end
