@@ -1,6 +1,6 @@
 require 'lua-general/init'
 
-statistic = createpackage('statistic', {})
+statistic = createpackage('lua-general/statistic', {})
 
 statistic.mean = function(list)
     local sum = 0
