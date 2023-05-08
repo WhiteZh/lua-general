@@ -102,22 +102,6 @@ addmetatable = function(_table, metatable, overwrite)
 	return setmetatable(_table, table.merge(getmetatable(_table) or {}, metatable, not overwrite))
 end
 
---[[indexlocator = function(sources)
-	if type(sources) ~= 'table' then return end
-	return function(self, key)
-		local count = 0
-		for each in eachs(sources) do
-			count = count + 1
-			print('count: '..tostring(count))
-			print('each: '..tostring(each))
-			local ret
-			if type(each) == 'function' then print('its function'); ret = each(self, key) end
-			if type(each) == 'table' then print('its table'); ret = each[key] end
-			if ret then return ret end
-		end
-	end
-end]]
-
 ---
 --- @param name string name
 --- @param attribute table attribute
@@ -159,55 +143,43 @@ addmetatable(coroutine, {__tostring = function() return 'Package: coroutine' end
 ---
 Object = createattribute('Object', {})
 ---
---- @param o table Object: Any
---- @return table Object: Object+Any
-Object.assign = function(o)
-	o = o or {}
-	o.__uniqueID = o.__uniqueID or string.sub(tostring(o), 8)
-	o.getUniqueID = function(self)
-		return self.__uniqueID
-	end
-	addmetatable(o, {
-		__tostring = function(self)
-			return 'Object: '..self.__uniqueID
-		end,
-	}, true)
-	return o
-end
+Object.members = {
+	__uniqueID = nil,
 
---[[Object = {
-	__attributeName = 'Object',
-	assign = function(self, o)
-		if not self then return end
-		o = o or {}
-		o.__uniqueID = o.__uniqueID or string.sub(tostring(o), 8)
-		return addmetatable(o, self, true)
-	end,
 	getUniqueID = function(self)
 		return self.__uniqueID
 	end,
+}
+---
+Object.metatable = {
 	__tostring = function(self)
 		return 'Object: '..self.__uniqueID
 	end,
-} Object.__index = indexlocator({Object}); assignattributename(Object);]]
+}
+---
+--- @param o table Object: Any
+--- @return table Object: Object+Any
+Object.assign = function(self, o)
+	o = o or {}
+	o.__uniqueID = o.__uniqueID or string.sub(tostring(o), 8)
+	o.getUniqueID = self.members.getUniqueID
+	addmetatable(o, self.metatable, true)
+	return o
+end
 
 ---
 List = createattribute('List', {})
 ---
---- @param o table Object: Any
---- @return table Object: List+Any
-List.assign = function(o)
-	o = o or {}
-	o = Object.assign(o)
-	o.clone = function(self)
+List.members = {
+	clone = function(self)
 		if not self then error("List: missing 'self', call using ':'") end
-		local result = List.assign()
+		local result = List:assign()
 		for v in eachs(self) do
 			result:append(v)
 		end
 		return result
-	end
-	o.show = function(self)
+	end,
+	show = function(self)
 		if not self then error("List: missing 'self', call using ':'") end
 		local result = '[ '
 		for v in eachs(self) do
@@ -215,8 +187,8 @@ List.assign = function(o)
 		end
 		result = string.sub(result,1,string.len(result)-3)..' ]'
 		return result
-	end
-	o.append = function(self, value, index)
+	end,
+	append = function(self, value, index)
 		if not self then error("List: missing 'self', call using ':'") end
 		if not value then error("List: missing 'value'") end
 		index = index or #self + 1
@@ -232,8 +204,8 @@ List.assign = function(o)
 			vi = vi + 1
 		end
 		return self
-	end
-	o.remove = function(self, index, length)
+	end,
+	remove = function(self, index, length)
 		if not self then error("List: missing 'self', call using ':'") end
 		index = index or #self
 		length = length or 1
@@ -241,87 +213,23 @@ List.assign = function(o)
 			self[i] = self[i+length]
 		end
 		return self
-	end
-	o.inter = function(self, ...)
+	end,
+	inter = function(self, ...)
 		if not self then error("List: missing 'self', call using ':'") end
 		local start = select('1', ...) or 1
 		local stop = select('2', ...) or #self
 		local step = select('3', ...) or 1
 		return List.create(range(start, stop, step), function(v) return self[v] end)
-	end
-	o.sort = function(self, comp)
+	end,
+	sort = function(self, comp)
 		if not self then error("List: missing 'self', call using ':'") end
 		table.sort(self, comp)
 		return self
-	end
-	addmetatable(o, {
-		__attributeName = 'List',
-		__add = function(self, value)
-			if type(value) ~= 'table' then
-				value = { value }
-			end
-			local result = self:clone()
-			for i=1,#value do
-				result:append(value[i])
-			end
-			return result
-		end,
-		__mul = function(self, times)
-			if type(times) ~= 'number' then
-				-- error('must be a number!')
-				return
-			end
-			if times <= 0 or times % 1 ~= 0 then
-				-- error('whole number onlyl!')
-				return
-			end
-			local result = List.assign()
-			for _ in range(times) do
-				result = result + self
-			end
-			return result
-		end,
-		__tostring = function(self)
-			return 'List: '..tostring(self:show())
-		end,
-	}, true)
-	return o
-end
+	end,
+}
 ---
---- @param iterFunction function iterator
---- @param modifyFunction function conditioner/modifier
---- @return table Object: List
-List.create = function(iterFunction, modifyFunction)
-	modifyFunction = modifyFunction or function(value) return value end
-	local result = List.assign()
-	local value = iterFunction()
-	while value ~= nil do
-		result:append(modifyFunction(value))
-		value = iterFunction()
-	end
-	return result
-end
-
---[[List = {
+List.metatable = {
 	__attributeName = 'List',
-	assign = function(self, o)
-		if not self then return end
-		o = o or {}
-		if type(o) ~= 'table' then o = { o } end
-		o = Object:assign(o)
-		return addmetatable(o, self, true)
-	end,
-	create = function(self, iterFunction, modifyFunction)
-		if not self then return end
-		modifyFunction = modifyFunction or function(value) return value end
-		local result = self:assign()
-		local value = iterFunction()
-		while value ~= nil do
-			result:append(modifyFunction(value))
-			value = iterFunction()
-		end
-		return result
-	end,
 	__add = function(self, value)
 		if type(value) ~= 'table' then
 			value = { value }
@@ -348,58 +256,35 @@ end
 		return result
 	end,
 	__tostring = function(self)
-		return self.__attributeName..': '..tostring(self:show())
+		return 'List: '..tostring(self:show())
 	end,
-	clone = function(self)
-		if not self then return end
-		local result = List:assign()
-		for v in eachs(self) do
-			result:append(v)
-		end
-		return result
-	end,
-	show = function(self)
-		if not self then return end
-		local result = '[ '
-		for v in eachs(self) do
-			result = result..string.format('%s , ',tostring(v))
-		end
-		result = string.sub(result,1,string.len(result)-3)..' ]'
-		return result
-	end,
-	append = function(self, value, index)
-		if not self or value == nil then return end
-		index = index or #self + 1
-		if type(value) ~= 'table' then
-			value = {value}
-		end
-		for i in range(#self,index,-1) do
-			self[i+#value] = self[i]
-		end
-		local vi = 1
-		for i in range(index, index+#value - 1) do
-			self[i] = value[vi]
-			vi = vi + 1
-		end
-		return self
-	end,
-	remove = function(self, index, length)
-		if not self then return end
-		index = index or #self
-		length = length or 1
-		for i in range(index, #self) do
-			self[i] = self[i+length]
-		end
-		return self
-	end,
-	inter = function(self, ...)
-		local start = select('1', ...) or 1
-		local stop = select('2', ...) or #self
-		local step = select('3', ...) or 1
-		return List:create(range(start, stop, step), function(v) return self[v] end)
-	end,
-	sort = function(self, comp)
-		table.sort(self, comp)
-		return self
+}
+---
+--- @param o table Object: Any
+--- @return table Object: List+Any
+List.assign = function(self, o)
+	o = o or {}
+	o = Object:assign(o)
+	o.clone = self.members.clone
+	o.show = self.members.show
+	o.append = self.members.append
+	o.remove = self.members.remove
+	o.inter = self.members.inter
+	o.sort = self.members.sort
+	addmetatable(o, self.metatable, true)
+	return o
+end
+---
+--- @param iterFunction function iterator
+--- @param modifyFunction function conditioner/modifier
+--- @return table Object: List
+List.create = function(self, iterFunction, modifyFunction)
+	modifyFunction = modifyFunction or function(value) return value end
+	local result = self:assign()
+	local value = iterFunction()
+	while value ~= nil do
+		result:append(modifyFunction(value))
+		value = iterFunction()
 	end
-} List.__index = indexlocator({List, Object.__index}); assignattributename(List);]]
+	return result
+end
