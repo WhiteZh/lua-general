@@ -143,7 +143,7 @@ addmetatable(coroutine, {__tostring = function() return 'Package: coroutine' end
 ---
 Object = createattribute('Object', {})
 ---
-Object.members = {
+Object.table = {
 	__uniqueID = nil,
 
 	getUniqueID = function(self)
@@ -162,7 +162,7 @@ Object.metatable = {
 Object.assign = function(self, o)
 	o = o or {}
 	o.__uniqueID = o.__uniqueID or string.sub(tostring(o), 8)
-	o.getUniqueID = self.members.getUniqueID
+	o.getUniqueID = self.table.getUniqueID
 	addmetatable(o, self.metatable, true)
 	return o
 end
@@ -170,7 +170,7 @@ end
 ---
 List = createattribute('List', {})
 ---
-List.members = {
+List.table = {
 	clone = function(self)
 		if not self then error("List: missing 'self', call using ':'") end
 		local result = List:assign()
@@ -265,12 +265,12 @@ List.metatable = {
 List.assign = function(self, o)
 	o = o or {}
 	o = Object:assign(o)
-	o.clone = self.members.clone
-	o.show = self.members.show
-	o.append = self.members.append
-	o.remove = self.members.remove
-	o.inter = self.members.inter
-	o.sort = self.members.sort
+	o.clone = self.table.clone
+	o.show = self.table.show
+	o.append = self.table.append
+	o.remove = self.table.remove
+	o.inter = self.table.inter
+	o.sort = self.table.sort
 	addmetatable(o, self.metatable, true)
 	return o
 end
