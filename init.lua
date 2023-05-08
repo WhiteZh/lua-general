@@ -77,6 +77,30 @@ addmetatable = function(_table, metatable, overwrite)
 	return setmetatable(_table, table.merge(getmetatable(_table) or {}, metatable, not overwrite))
 end
 
+createindexlocator = function(source, ...)
+	if not source then return end
+	local argn = select('#', ...)
+	local indexes = {}
+	for i in range(argn) do
+		table.insert(indexes, select(i, ...))
+	end
+	return function(self, key)
+		if source[key] ~= nil then return source[key]
+		else
+			for i in range(argn) do
+				local result = indexes[i](self, key)
+				if result then return result end
+			end
+		end
+		return nil
+	end
+end
+
+assignattributename = function(attribute, name)
+	name = name or attribute.__attributeName
+	addmetatable(attribute, {__tostring = function() return 'Attribute: '..name end}, true)
+end
+
 
 addmetatable(table, {__tostring = function() return 'Package: table' end}, true)
 addmetatable(debug, {__tostring = function() return 'Package: debug' end}, true)
@@ -89,8 +113,7 @@ addmetatable(coroutine, {__tostring = function() return 'Package: coroutine' end
 
 
 Object = {
-	__className = 'Object',
-	__index = Object,
+	__attributeName = 'Object',
 	new = function(self, o)
 		if not self then return end
 		o = o or {}
@@ -98,12 +121,12 @@ Object = {
 		return addmetatable(o, self, true)
 	end,
 	__tostring = function(self)
-		return self.__className..': '..self.__uniqueID
+		return self.__attributeName..': '..self.__uniqueID
 	end,
-} Object.__index = Object; setmetatable(Object, {__tostring = function() return 'Class: Object' end});
+} Object.__index = createindexlocator(Object); assignattributename(Object);
 
 List = {
-	__className = 'List',
+	__attributeName = 'List',
 	new = function(self, o)
 		if not self then return end
 		o = o or {}
@@ -148,7 +171,7 @@ List = {
 		return result
 	end,
 	__tostring = function(self)
-		return self.__className..': '..tostring(self:show())
+		return self.__attributeName..': '..tostring(self:show())
 	end,
 	clone = function(self)
 		if not self then return end
@@ -202,4 +225,4 @@ List = {
 		table.sort(self, comp)
 		return self
 	end
-} List.__index = List; setmetatable(List, {__tostring = function() return 'Class: List' end})
+} List.__index = createindexlocator(List, Object.__index); assignattributename(List);
