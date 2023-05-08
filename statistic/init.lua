@@ -1,7 +1,6 @@
 require 'lua-general/init'
 
-statistic = {}
-setmetatable(statistic, {__tostring = function() return 'Package: lua-general/statistic' end})
+statistic = createpackage('statistic', {})
 
 statistic.mean = function(list)
     local sum = 0
