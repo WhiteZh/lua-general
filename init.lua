@@ -108,7 +108,7 @@ end
 --- @return table attribute
 createattribute = function(name, attribute)
 	name = name or attribute.__attributeName
-	return addmetatable(attribute, {__tostring = function() return 'Attribute: '..name end}, true)
+	return addmetatable(attribute, {__tostring = function() return 'Attribute: '..name end, __uniqueID = string.sub(tostring(attribute), 8)}, true)
 end
 
 ---
@@ -116,8 +116,8 @@ end
 --- @param package table package
 --- @return table package
 createpackage = function(name, package)
-	name = name or package.__attributeName
-	return addmetatable(package, { __tostring = function() return 'Package: '..name end}, true)
+	name = name or package.__packageName
+	return addmetatable(package, { __tostring = function() return 'Package: '..name end, __uniqueID = string.sub(tostring(package), 8)}, true)
 end
 
 ---
