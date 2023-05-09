@@ -120,6 +120,23 @@ createpackage = function(name, package)
 	return addmetatable(package, { __tostring = function() return 'Package: '..name end}, true)
 end
 
+---
+--- @param times number times
+--- @param value any value
+--- @return any
+dup = function(...)
+	local times, value
+	if select('#', ...) == 1 then
+		times = 2
+		value = select(1, ...)
+	else
+		times = select(1, ...)
+		value = select(2, ...)
+	end
+	if times == 1 then return value end
+	return value, dup(times - 1, value)
+end
+
 createpackage('table', table)
 createpackage('debug', debug)
 createpackage('os', os)
