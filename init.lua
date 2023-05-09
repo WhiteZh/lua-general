@@ -108,7 +108,8 @@ end
 --- @return table attribute
 createattribute = function(name, attribute)
 	name = name or attribute.__attributeName
-	return addmetatable(attribute, {__tostring = function() return 'Attribute: '..name end, __uniqueID = string.sub(tostring(attribute), 8)}, true)
+	attribute.__uniqueID = string.sub(tostring(attribute), 8)
+	return addmetatable(attribute, {__tostring = function() return 'Attribute: '..name end}, true)
 end
 
 ---
@@ -117,7 +118,8 @@ end
 --- @return table package
 createpackage = function(name, package)
 	name = name or package.__packageName
-	return addmetatable(package, { __tostring = function() return 'Package: '..name end, __uniqueID = string.sub(tostring(package), 8)}, true)
+	package.__uniqueID = string.sub(tostring(package), 8)
+	return addmetatable(package, { __tostring = function() return 'Package: '..name end}, true)
 end
 
 ---
@@ -161,26 +163,52 @@ addmetatable(coroutine, {__tostring = function() return 'Package: coroutine' end
 Object = createattribute('Object', {})
 ---
 Object.table = {
-	__uniqueID = nil,
+	__up = function(this, self)
+		setmetatable(self, {})
+		for i,v in pairs(self) do
+			if string.sub(tostring(i),1,2) ~= '__' then
+				self[i] = nil
+			end
+		end
 
-	getUniqueID = function(self)
+		self.getUniqueID = this.getUniqueID
+		self.isInstance = this.isInstance
+		self.as = this.as
+
+		setmetatable(self, {
+			__tostring = function(self)
+				return 'Object: '..self.__uniqueID
+			end,
+		})
+	end,
+
+	getUniqueID = function(this, self)
 		return self.__uniqueID
 	end,
-}
----
-Object.metatable = {
-	__tostring = function(self)
-		return 'Object: '..self.__uniqueID
+	isInstance = function(this, self, attribute)
+		return self.__attributes[attribute.__uniqueID] and true or false
+	end,
+	as = function(this, self, attribute)
+		if not this.isInstance(self, attribute) then error("Object.as: 'self' does not contain '"..tostring(attribute).."'") end
+		return self.__attributes[attribute.__uniqueID]:__up(self)
 	end,
 }
 ---
---- @param o table Object: Any
---- @return table Object: Object+Any
-Object.assign = function(self, o)
-	o = o or {}
-	o.__uniqueID = o.__uniqueID or string.sub(tostring(o), 8)
-	o.getUniqueID = self.table.getUniqueID
-	addmetatable(o, self.metatable, true)
+Object.new = function(self)
+	local o = {}
+	o.__attributes = {}
+	o.__uniqueID = string.sub(tostring(o), 8)
+	local this
+	this, o.__attributes[self.__uniqueID] = dup({})
+
+	this.__up = self.table.__up
+
+	this.getUniqueID = function(...) return self.table.getUniqueID(this, ...) end
+	this.isInstance = function(...) return self.table.isInstance(this, ...) end
+	this.as = function(...) return self.table.as(this, ...) end
+
+	o.__attributes[self.__uniqueID]:__up(o)
+
 	return o
 end
 
@@ -188,107 +216,134 @@ end
 List = createattribute('List', {})
 ---
 List.table = {
-	clone = function(self)
+	__up = function(this, self)
+		self.__attributes[Object.__uniqueID].as(self, Object)
+
+		self.clone = this.clone
+		self.show = this.show
+		self.append = this.append
+		self.remove = this.remove
+		self.inter = this.inter
+		self.sort = this.sort
+
+		addmetatable(self, {
+			__index = function(self, key)
+				if type(key) ~= 'number' then return end
+				return this[key]
+			end,
+			__newindex = function(self, key, value)
+				if type(key) ~= 'number' then return end
+				this[key] = value
+			end,
+			__add = function(self, value)
+				if type(value) ~= 'table' then
+					value = { value }
+				end
+				local result = this:clone()
+				for i=1,#value do
+					result:append(value[i])
+				end
+				return result
+			end,
+			__mul = function(self, times)
+				if type(times) ~= 'number' then
+					error('must be a number!')
+				end
+				if times <= 0 or times % 1 ~= 0 then
+					error('whole number onlyl!')
+				end
+				local result = List:new()
+				for _ in range(times) do
+					result = result + this
+				end
+				return result
+			end,
+			__tostring = function(self)
+				return 'List: '..tostring(this:show())
+			end,
+		}, true)
+	end,
+
+	clone = function(this, self)
 		if not self then error("List: missing 'self', call using ':'") end
-		local result = List:assign()
-		for v in eachs(self) do
+		local result = List:new()
+		for v in eachs(this) do
 			result:append(v)
 		end
 		return result
 	end,
-	show = function(self)
+	show = function(this, self)
 		if not self then error("List: missing 'self', call using ':'") end
 		local result = '[ '
-		for v in eachs(self) do
+		for v in eachs(this) do
 			result = result..string.format('%s , ',tostring(v))
 		end
 		result = string.sub(result,1,string.len(result)-3)..' ]'
 		return result
 	end,
-	append = function(self, value, index)
+	append = function(this, self, value, index)
 		if not self then error("List: missing 'self', call using ':'") end
 		if not value then error("List: missing 'value'") end
-		index = index or #self + 1
+		index = index or #this + 1
 		if type(value) ~= 'table' then
 			value = {value}
 		end
-		for i in range(#self,index,-1) do
-			self[i+#value] = self[i]
+		for i in range(#this,index,-1) do
+			this[i+#value] = this[i]
 		end
 		local vi = 1
 		for i in range(index, index+#value - 1) do
-			self[i] = value[vi]
+			this[i] = value[vi]
 			vi = vi + 1
 		end
 		return self
 	end,
-	remove = function(self, index, length)
+	remove = function(this, self, index, length)
 		if not self then error("List: missing 'self', call using ':'") end
-		index = index or #self
+		index = index or #this
 		length = length or 1
-		for i in range(index, #self) do
-			self[i] = self[i+length]
+		for i in range(index, #this) do
+			this[i] = this[i+length]
 		end
 		return self
 	end,
-	inter = function(self, ...)
+	inter = function(this, self, ...)
 		if not self then error("List: missing 'self', call using ':'") end
 		local start = select('1', ...) or 1
-		local stop = select('2', ...) or #self
+		local stop = select('2', ...) or #this
 		local step = select('3', ...) or 1
-		return List.create(range(start, stop, step), function(v) return self[v] end)
+		return List.create(range(start, stop, step), function(v) return this[v] end)
 	end,
-	sort = function(self, comp)
+	sort = function(this, self, comp)
 		if not self then error("List: missing 'self', call using ':'") end
-		table.sort(self, comp)
+		table.sort(this, comp)
 		return self
 	end,
 }
 ---
-List.metatable = {
-	__attributeName = 'List',
-	__add = function(self, value)
-		if type(value) ~= 'table' then
-			value = { value }
-		end
-		local result = self:clone()
-		for i=1,#value do
-			result:append(value[i])
-		end
-		return result
-	end,
-	__mul = function(self, times)
-		if type(times) ~= 'number' then
-			-- error('must be a number!')
-			return
-		end
-		if times <= 0 or times % 1 ~= 0 then
-			-- error('whole number onlyl!')
-			return
-		end
-		local result = List:assign()
-		for _ in range(times) do
-			result = result + self
-		end
-		return result
-	end,
-	__tostring = function(self)
-		return 'List: '..tostring(self:show())
-	end,
-}
+List.new = function(self)
+	local o = {}
+	o = Object:new()
+	return List:assign(o)
+end
 ---
 --- @param o table Object: Any
 --- @return table Object: List+Any
 List.assign = function(self, o)
-	o = o or {}
-	o = Object:assign(o)
-	o.clone = self.table.clone
-	o.show = self.table.show
-	o.append = self.table.append
-	o.remove = self.table.remove
-	o.inter = self.table.inter
-	o.sort = self.table.sort
-	addmetatable(o, self.metatable, true)
+	local this
+	this, o.__attributes[self.__uniqueID] = dup({})
+
+	this.__up = self.table.__up
+
+	this.clone = function(...) return self.table.clone(this, ...) end
+	this.show = function(...) return self.table.show(this, ...) end
+	this.append = function(...) return self.table.append(this, ...) end
+	this.remove = function(...) return self.table.remove(this, ...) end
+	this.inter = function(...) return self.table.inter(this, ...) end
+	this.sort = function(...) return self.table.sort(this, ...) end
+
+	o.__attributes[self.__uniqueID]:__up(o)
+
 	return o
 end
 ---
@@ -297,7 +352,7 @@ end
 --- @return table Object: List
 List.create = function(self, iterFunction, modifyFunction)
 	modifyFunction = modifyFunction or function(value) return value end
-	local result = self:assign()
+	local result = self:new()
 	local value = iterFunction()
 	while value ~= nil do
 		result:append(modifyFunction(value))
