@@ -94,6 +94,11 @@ table.merge = function(table1, table2, soft)
 end
 
 ---
+table.clone = function(_table)
+	return table.merge({}, _table)
+end
+
+---
 --- @param _table table table
 --- @param metatable table metatable
 --- @param overwrite boolean overwriting existed; default: false
@@ -171,9 +176,11 @@ Object.table = {
 			end
 		end
 
-		self.getUniqueID = this.getUniqueID
-		self.isInstance = this.isInstance
-		self.as = this.as
+		for i,v in pairs(this) do
+			if string.sub(tostring(i),1,2) ~= '__' then
+				self[i] = v
+			end
+		end
 
 		setmetatable(self, {
 			__tostring = function(self)
@@ -185,11 +192,11 @@ Object.table = {
 	getUniqueID = function(this, self)
 		return self.__uniqueID
 	end,
-	isInstance = function(this, self, attribute)
+	hasAttribute = function(this, self, attribute)
 		return self.__attributes[attribute.__uniqueID] and true or false
 	end,
 	as = function(this, self, attribute)
-		if not this.isInstance(self, attribute) then error("Object.as: 'self' does not contain '"..tostring(attribute).."'") end
+		if not this.hasAttribute(self, attribute) then error("Object.as: 'self' does not contain '"..tostring(attribute).."'") end
 		return self.__attributes[attribute.__uniqueID]:__up(self)
 	end,
 }
@@ -203,9 +210,11 @@ Object.new = function(self)
 
 	this.__up = self.table.__up
 
-	this.getUniqueID = function(...) return self.table.getUniqueID(this, ...) end
-	this.isInstance = function(...) return self.table.isInstance(this, ...) end
-	this.as = function(...) return self.table.as(this, ...) end
+	for i,v in pairs(self.table) do
+		if string.sub(tostring(i),1,2) ~= '__' then
+			this[i] = function(...) return v(this, ...) end
+		end
+	end
 
 	o.__attributes[self.__uniqueID]:__up(o)
 
@@ -219,12 +228,11 @@ List.table = {
 	__up = function(this, self)
 		self.__attributes[Object.__uniqueID].as(self, Object)
 
-		self.clone = this.clone
-		self.show = this.show
-		self.append = this.append
-		self.remove = this.remove
-		self.inter = this.inter
-		self.sort = this.sort
+		for i,v in pairs(this) do
+			if string.sub(tostring(i),1,2) ~= '__' then
+				self[i] = v
+			end
+		end
 
 		addmetatable(self, {
 			__index = function(self, key)
@@ -324,7 +332,7 @@ List.table = {
 List.new = function(self)
 	local o = {}
 	o = Object:new()
-	return List:assign(o)
+	return self:assign(o)
 end
 ---
 --- @param o table Object: Any
@@ -335,12 +343,11 @@ List.assign = function(self, o)
 
 	this.__up = self.table.__up
 
-	this.clone = function(...) return self.table.clone(this, ...) end
-	this.show = function(...) return self.table.show(this, ...) end
-	this.append = function(...) return self.table.append(this, ...) end
-	this.remove = function(...) return self.table.remove(this, ...) end
-	this.inter = function(...) return self.table.inter(this, ...) end
-	this.sort = function(...) return self.table.sort(this, ...) end
+	for i,v in pairs(self.table) do
+		if string.sub(tostring(i),1,2) ~= '__' then
+			this[i] = function(...) return v(this, ...) end
+		end
+	end
 
 	o.__attributes[self.__uniqueID]:__up(o)
 
