@@ -94,6 +94,8 @@ table.merge = function(table1, table2, soft)
 end
 
 ---
+--- @param _table table clone source
+--- @return table clone
 table.clone = function(_table)
 	return table.merge({}, _table)
 end
