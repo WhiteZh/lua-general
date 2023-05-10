@@ -116,6 +116,7 @@ end
 createattribute = function(name, attribute)
 	name = name or attribute.__attributeName
 	attribute.__uniqueID = string.sub(tostring(attribute), 8)
+	attribute.__attributeName = name
 	return addmetatable(attribute, {__tostring = function() return 'Attribute: '..name end}, true)
 end
 
@@ -126,6 +127,7 @@ end
 createpackage = function(name, package)
 	name = name or package.__packageName
 	package.__uniqueID = string.sub(tostring(package), 8)
+	package.__packageName = name
 	return addmetatable(package, { __tostring = function() return 'Package: '..name end}, true)
 end
 
@@ -169,7 +171,13 @@ addmetatable(coroutine, {__tostring = function() return 'Package: coroutine' end
 ---
 Object = createattribute('Object', {})
 ---
-Object.table = {
+Object.__meta = {
+	__tostring = function(this, self)
+		return self.__attributeName..': '..self.__uniqueID
+	end,
+}
+---
+Object.__methods = {
 	__up = function(this, self)
 		setmetatable(self, {})
 		for i,v in pairs(self) do
@@ -177,6 +185,7 @@ Object.table = {
 				self[i] = nil
 			end
 		end
+		self.__attributeName = this.__attributeName
 
 		for i,v in pairs(this) do
 			if string.sub(tostring(i),1,2) ~= '__' then
@@ -184,11 +193,12 @@ Object.table = {
 			end
 		end
 
-		setmetatable(self, {
-			__tostring = function(self)
-				return 'Object: '..self.__uniqueID
-			end,
-		})
+		local meta = {}
+		for i,v in pairs(this.__meta) do
+			meta[i] = function(...) return v(this, ...) end
+		end
+
+		setmetatable(self, meta)
 	end,
 
 	getUniqueID = function(this, self)
@@ -199,7 +209,7 @@ Object.table = {
 	end,
 	as = function(this, self, attribute)
 		if not this.hasAttribute(self, attribute) then error("Object.as: 'self' does not contain '"..tostring(attribute).."'") end
-		return self.__attributes[attribute.__uniqueID]:__up(self)
+		return self.__attributes[attribute.__uniqueID].__up(self)
 	end,
 }
 ---
@@ -210,15 +220,15 @@ Object.new = function(self)
 	local this
 	this, o.__attributes[self.__uniqueID] = dup({})
 
-	this.__up = self.table.__up
+	this.__attributeName = self.__attributeName
 
-	for i,v in pairs(self.table) do
-		if string.sub(tostring(i),1,2) ~= '__' then
-			this[i] = function(...) return v(this, ...) end
-		end
+	for i,v in pairs(self.__methods) do
+		this[i] = function(...) return v(this, ...) end
 	end
 
-	o.__attributes[self.__uniqueID]:__up(o)
+	this.__meta = self.__meta
+
+	o.__attributes[self.__uniqueID].__up(o)
 
 	return o
 end
@@ -226,9 +236,48 @@ end
 ---
 List = createattribute('List', {})
 ---
-List.table = {
+List.__meta = {
+	__index = function(this, self, key)
+		if type(key) ~= 'number' then return end
+		return this[key]
+	end,
+	__newindex = function(this, self, key, value)
+		if type(key) ~= 'number' then return end
+		this[key] = value
+	end,
+	__add = function(this, self, value)
+		if type(value) ~= 'table' then
+			value = { value }
+		end
+		local result = this:clone()
+		for i=1,#value do
+			result:append(value[i])
+		end
+		return result
+	end,
+	__mul = function(this, self, times)
+		if type(times) ~= 'number' then
+			error('must be a number!')
+		end
+		if times <= 0 or times % 1 ~= 0 then
+			error('whole number onlyl!')
+		end
+		local result = List:new()
+		for _ in range(times) do
+			result = result + this
+		end
+		return result
+	end,
+	__tostring = function(this, self)
+		return self.__attributeName..': '..tostring(this:show())
+	end,
+}
+---
+List.__methods = {
 	__up = function(this, self)
 		self.__attributes[Object.__uniqueID].as(self, Object)
+
+		self.__attributeName = this.__attributeName
 
 		for i,v in pairs(this) do
 			if string.sub(tostring(i),1,2) ~= '__' then
@@ -236,42 +285,12 @@ List.table = {
 			end
 		end
 
-		addmetatable(self, {
-			__index = function(self, key)
-				if type(key) ~= 'number' then return end
-				return this[key]
-			end,
-			__newindex = function(self, key, value)
-				if type(key) ~= 'number' then return end
-				this[key] = value
-			end,
-			__add = function(self, value)
-				if type(value) ~= 'table' then
-					value = { value }
-				end
-				local result = this:clone()
-				for i=1,#value do
-					result:append(value[i])
-				end
-				return result
-			end,
-			__mul = function(self, times)
-				if type(times) ~= 'number' then
-					error('must be a number!')
-				end
-				if times <= 0 or times % 1 ~= 0 then
-					error('whole number onlyl!')
-				end
-				local result = List:new()
-				for _ in range(times) do
-					result = result + this
-				end
-				return result
-			end,
-			__tostring = function(self)
-				return 'List: '..tostring(this:show())
-			end,
-		}, true)
+		local meta = {}
+		for i,v in pairs(this.__meta) do
+			meta[i] = function(...) return v(this, ...) end
+		end
+
+		addmetatable(self, meta, true)
 	end,
 
 	clone = function(this, self)
@@ -343,15 +362,15 @@ List.assign = function(self, o)
 	local this
 	this, o.__attributes[self.__uniqueID] = dup({})
 
-	this.__up = self.table.__up
+	this.__attributeName = self.__attributeName
 
-	for i,v in pairs(self.table) do
-		if string.sub(tostring(i),1,2) ~= '__' then
-			this[i] = function(...) return v(this, ...) end
-		end
+	for i,v in pairs(self.__methods) do
+		this[i] = function(...) return v(this, ...) end
 	end
 
-	o.__attributes[self.__uniqueID]:__up(o)
+	this.__meta = self.__meta
+
+	o.__attributes[self.__uniqueID].__up(o)
 
 	return o
 end
