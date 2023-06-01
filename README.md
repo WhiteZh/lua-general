@@ -13,3 +13,7 @@ Here's an example code provided by GPT-4:
 
 Actually, GPT is pretty useful. I used to think that it's not accurate enough, but recently my altitude has changed rapidly.  
 Also, that '@' is mandatory, put it in front of root ('/').
+
+---------------------
+
+- Jun 1, 2023: alpha -> beta
