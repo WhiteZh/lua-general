@@ -223,6 +223,9 @@ List.__meta = {
 		if type(key) ~= 'number' then return end
 		self.__attributes[List.__uniqueID].values[key] = value
 	end,
+	__len = function(self)
+		return #self.__attributes[List.__uniqueID].values
+	end,
 	__add = function(self, value)
 		if type(value) ~= 'table' then
 			value = { value }
