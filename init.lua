@@ -321,12 +321,7 @@ end
 ---
 List.new = function()
 	local o = Object.new()
-	return List.assign(o)
-end
----
---- @param o table Object: Any
---- @return table Object: List+Any
-List.assign = function(o)
+
 	o.__attributeName = List.__attributeName
 
 	o.__attributes[List.__uniqueID] = {
@@ -352,4 +347,12 @@ List.create = function(iterFunction, modifyFunction)
 		value = iterFunction()
 	end
 	return result
+end
+---
+--- @param list table list
+--- @return table List
+List.from = function(list)
+	local ret = List.new()
+	ret.append(list)
+	return ret
 end
