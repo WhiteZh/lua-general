@@ -1,4 +1,4 @@
-require 'lua-general/init'
+require 'lua-general'
 
 statistic = createpackage('lua-general/statistic', {})
 
