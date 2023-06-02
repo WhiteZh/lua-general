@@ -132,20 +132,15 @@ createpackage = function(name, package)
 end
 
 ---
---- @param times number times
---- @param value any value
---- @return any
-dup = function(...)
-	local times, value
-	if select('#', ...) == 1 then
-		times = 2
-		value = select(1, ...)
-	else
-		times = select(1, ...)
-		value = select(2, ...)
+--- @param methods table __methods
+--- @param self table the object
+--- @return table concealed methods
+concealmethods = function(methods, self)
+	local ret = {}
+	for k,v in pairs(methods) do
+		ret[k] = function(...) return v(self, ...)  end
 	end
-	if times == 1 then return value end
-	return value, dup(times - 1, value)
+	return ret
 end
 
 createpackage('table', table)
@@ -172,205 +167,175 @@ addmetatable(coroutine, {__tostring = function() return 'Package: coroutine' end
 Object = createattribute('Object', {})
 ---
 Object.__meta = {
-	__tostring = function(this, self)
+	__tostring = function(self)
 		return self.__attributeName..': '..self.__uniqueID
 	end,
 }
 ---
 Object.__methods = {
-	__up = function(this, self)
-		setmetatable(self, {})
-		for i,v in pairs(self) do
-			if string.sub(tostring(i),1,2) ~= '__' then
-				self[i] = nil
-			end
-		end
-		self.__attributeName = this.__attributeName
-
-		for i,v in pairs(this) do
-			if string.sub(tostring(i),1,2) ~= '__' then
-				self[i] = v
-			end
-		end
-
-		local meta = {}
-		for i,v in pairs(this.__meta) do
-			meta[i] = function(...) return v(this, ...) end
-		end
-
-		setmetatable(self, meta)
-	end,
-
-	getUniqueID = function(this, self)
+	getUniqueID = function(self)
 		return self.__uniqueID
 	end,
-	hasAttribute = function(this, self, attribute)
+	hasAttribute = function(self, attribute)
 		return self.__attributes[attribute.__uniqueID] and true or false
 	end,
-	as = function(this, self, attribute)
-		if not this.hasAttribute(self, attribute) then error("Object.as: 'self' does not contain '"..tostring(attribute).."'") end
-		return self.__attributes[attribute.__uniqueID].__up(self)
+	as = function(self, attribute)
+		if not Object.__methods.hasAttribute(self, attribute) then
+			error("Object.as: 'self' does not contain '"..tostring(attribute).."'") end
+		return attribute.__up(self)
 	end,
 }
 ---
-Object.new = function(self)
+Object.__up = function(self)
+	local __uniqueID, __attributes = self.__uniqueID, self.__attributes
+	for i,v in pairs(self) do self[i] = nil end
+	self.__uniqueID, self.__attributes, self.__attributeName = __uniqueID, __attributes, Object.__attributeName
+
+	setmetatable(self, self.__attributes[Object.__uniqueID].__meta)
+	for i,v in pairs(self.__attributes[Object.__uniqueID].__methods) do self[i] = v end
+end
+---
+Object.new = function()
 	local o = {}
 	o.__attributes = {}
 	o.__uniqueID = string.sub(tostring(o), 8)
-	local this
-	this, o.__attributes[self.__uniqueID] = dup({})
 
-	this.__attributeName = self.__attributeName
+	o.__attributes[Object.__uniqueID] = {
+		__methods = concealmethods(Object.__methods, o),
+		__meta = table.merge({}, Object.__meta),
+	}
 
-	for i,v in pairs(self.__methods) do
-		this[i] = function(...) return v(this, ...) end
-	end
-
-	this.__meta = self.__meta
-
-	o.__attributes[self.__uniqueID].__up(o)
+	Object.__up(o)
 
 	return o
 end
+
 
 ---
 List = createattribute('List', {})
 ---
 List.__meta = {
-	__index = function(this, self, key)
+	__index = function(self, key)
 		if type(key) ~= 'number' then return end
-		return this[key]
+		return self.__attributes[List.__uniqueID].values[key]
 	end,
-	__newindex = function(this, self, key, value)
+	__newindex = function(self, key, value)
 		if type(key) ~= 'number' then return end
-		this[key] = value
+		self.__attributes[List.__uniqueID].values[key] = value
 	end,
-	__add = function(this, self, value)
+	__add = function(self, value)
 		if type(value) ~= 'table' then
 			value = { value }
 		end
-		local result = this:clone()
+		local result = self.__attributes[List.__uniqueID].__methods.clone()
 		for i=1,#value do
-			result:append(value[i])
+			result.append(value[i])
 		end
 		return result
 	end,
-	__mul = function(this, self, times)
+	__mul = function(self, times)
 		if type(times) ~= 'number' then
-			error('must be a number!')
+			error('List.__meta.__mul: must be a number!')
 		end
 		if times <= 0 or times % 1 ~= 0 then
-			error('whole number onlyl!')
+			error('List.__meta.__mul: whole number onlyl!')
 		end
-		local result = List:new()
+		local result = List.new()
 		for _ in range(times) do
-			result = result + this
+			result.append(self.__attributes[List.__uniqueID].values)
 		end
 		return result
 	end,
-	__tostring = function(this, self)
-		return self.__attributeName..': '..tostring(this:show())
+	__tostring = function(self)
+		return self.__attributeName..': '..tostring(self.__attributes[List.__uniqueID].__methods.show())
 	end,
 }
 ---
 List.__methods = {
-	__up = function(this, self)
-		self.__attributes[Object.__uniqueID].as(self, Object)
-
-		self.__attributeName = this.__attributeName
-
-		for i,v in pairs(this) do
-			if string.sub(tostring(i),1,2) ~= '__' then
-				self[i] = v
-			end
-		end
-
-		local meta = {}
-		for i,v in pairs(this.__meta) do
-			meta[i] = function(...) return v(this, ...) end
-		end
-
-		addmetatable(self, meta, true)
-	end,
-
-	clone = function(this, self)
+	clone = function(self)
 		if not self then error("List: missing 'self', call using ':'") end
-		local result = List:new()
-		for v in eachs(this) do
-			result:append(v)
+		local result = List.new()
+		for v in eachs(self.__attributes[List.__uniqueID].values) do
+			result.append(v)
 		end
 		return result
 	end,
-	show = function(this, self)
+	show = function(self)
 		if not self then error("List: missing 'self', call using ':'") end
 		local result = '[ '
-		for v in eachs(this) do
+		for v in eachs(self.__attributes[List.__uniqueID].values) do
 			result = result..string.format('%s , ',tostring(v))
 		end
 		result = string.sub(result,1,string.len(result)-3)..' ]'
 		return result
 	end,
-	append = function(this, self, value, index)
+	append = function(self, value, index)
 		if not self then error("List: missing 'self', call using ':'") end
 		if not value then error("List: missing 'value'") end
+		local this = self.__attributes[List.__uniqueID].values
 		index = index or #this + 1
 		if type(value) ~= 'table' then
 			value = {value}
 		end
-		for i in range(#this,index,-1) do
-			this[i+#value] = this[i]
-		end
-		local vi = 1
-		for i in range(index, index+#value - 1) do
-			this[i] = value[vi]
-			vi = vi + 1
+		for i,v in ipairs(value) do
+			table.insert(this, index+i-1, v)
 		end
 		return self
 	end,
-	remove = function(this, self, index, length)
+	remove = function(self, index, length)
 		if not self then error("List: missing 'self', call using ':'") end
+		local this = self.__attributes[List.__uniqueID].values
 		index = index or #this
 		length = length or 1
-		for i in range(index, #this) do
-			this[i] = this[i+length]
+		for i in range(length) do
+			table.remove(this, index)
 		end
 		return self
 	end,
-	inter = function(this, self, ...)
+	inter = function(self, ...)
 		if not self then error("List: missing 'self', call using ':'") end
+		local this = self.__attributes[List.__uniqueID].values
 		local start = select('1', ...) or 1
 		local stop = select('2', ...) or #this
 		local step = select('3', ...) or 1
 		return List.create(range(start, stop, step), function(v) return this[v] end)
 	end,
-	sort = function(this, self, comp)
+	sort = function(self, comp)
 		if not self then error("List: missing 'self', call using ':'") end
-		table.sort(this, comp)
+		table.sort(self.__attributes[List.__uniqueID].values, comp)
 		return self
 	end,
 }
 ---
-List.new = function(self)
-	local o = {}
-	o = Object:new()
-	return self:assign(o)
+List.__up = function(self)
+	Object.__up(self)
+
+	self.__attributeName = List.__attributeName
+
+	for i,v in pairs(self.__attributes[List.__uniqueID].__methods) do
+		self[i] = v
+	end
+
+	addmetatable(self, self.__attributes[List.__uniqueID].__meta, true)
+end
+---
+List.new = function()
+	local o = Object.new()
+	return List.assign(o)
 end
 ---
 --- @param o table Object: Any
 --- @return table Object: List+Any
-List.assign = function(self, o)
-	local this
-	this, o.__attributes[self.__uniqueID] = dup({})
+List.assign = function(o)
+	o.__attributeName = List.__attributeName
 
-	this.__attributeName = self.__attributeName
+	o.__attributes[List.__uniqueID] = {
+		__methods = concealmethods(List.__methods, o),
+		__meta = table.merge({}, List.__meta),
+		values = {},
+	}
 
-	for i,v in pairs(self.__methods) do
-		this[i] = function(...) return v(this, ...) end
-	end
-
-	this.__meta = self.__meta
-
-	o.__attributes[self.__uniqueID].__up(o)
+	List.__up(o)
 
 	return o
 end
@@ -378,12 +343,12 @@ end
 --- @param iterFunction function iterator
 --- @param modifyFunction function conditioner/modifier
 --- @return table Object: List
-List.create = function(self, iterFunction, modifyFunction)
+List.create = function(iterFunction, modifyFunction)
 	modifyFunction = modifyFunction or function(value) return value end
-	local result = self:new()
+	local result = List.new()
 	local value = iterFunction()
 	while value ~= nil do
-		result:append(modifyFunction(value))
+		result.append(modifyFunction(value))
 		value = iterFunction()
 	end
 	return result
