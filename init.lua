@@ -279,6 +279,8 @@ List.__methods = {
 		index = index or #this + 1
 		if type(value) ~= 'table' then
 			value = {value}
+		else
+			value = List.from(value)
 		end
 		for i,v in ipairs(value) do
 			table.insert(this, index+i-1, v)
@@ -356,6 +358,8 @@ end
 --- @return table List
 List.from = function(list)
 	local ret = List.new()
-	ret.append(list)
+	for i,v in ipairs(list) do
+		ret[i] = v
+	end
 	return ret
 end
