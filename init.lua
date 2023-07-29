@@ -132,15 +132,51 @@ createpackage = function(name, package)
 end
 
 ---
---- @param methods table __methods
---- @param self table the object
---- @return table concealed methods
-concealmethods = function(methods, self)
-	local ret = {}
-	for k,v in pairs(methods) do
-		ret[k] = function(...) return v(self, ...)  end
+--- the default index locator
+--- theoretically shouldn't have to use it directly
+__indexlocator = function(self, key)
+	local this = self
+	self = getmetatable(self)
+	if not self then
+		error("__indexlocator: no metatable!")
 	end
-	return ret
+	for i in range(#(self.indexs), 1, -1) do
+		local each = self.indexs[i]
+		if type(each) == 'table' then 
+			local val = each[key]
+			if val then
+				return val
+			end
+		elseif type(each) == 'function' then
+			local val = each(this, key)
+			if val then
+				return val
+			end
+		end
+	end
+	return nil
+end
+
+---
+--- @param _table table table/object
+--- @param _attributes table a list containing the applying attributes
+--- @return table _table with attributes applied
+addindex = function(_table, _attributes)
+	local _meta = getmetatable(_table) or {}
+	_meta.indexs = _meta.indexs or {}
+
+	for each in eachs(_attributes) do
+		if type(each) == 'table' then
+			_meta.indexs[#(_meta.indexs) + 1] = each.__methods
+			table.merge(_meta, each.__meta, false)
+		elseif type(each) == 'function' then
+			_meta.indexs[#(_meta.indexs) + 1] = each
+		end
+	end
+
+	_meta.__index = __indexlocator
+
+	return setmetatable(_table, _meta)
 end
 
 createpackage('table', table)
@@ -151,16 +187,6 @@ createpackage('math', math)
 createpackage('string', string)
 createpackage('package', package)
 createpackage('coroutine', coroutine)
-
-
-addmetatable(table, {__tostring = function() return 'Package: table' end}, true)
-addmetatable(debug, {__tostring = function() return 'Package: debug' end}, true)
-addmetatable(os, {__tostring = function() return 'Package: os' end}, true)
-addmetatable(io, {__tostring = function() return 'Package: io' end}, true)
-addmetatable(math, {__tostring = function() return 'Package: math' end}, true)
-addmetatable(string, {__tostring = function() return 'Package: string' end}, true)
-addmetatable(package, {__tostring = function() return 'Package: package' end}, true)
-addmetatable(coroutine, {__tostring = function() return 'Package: coroutine' end}, true)
 
 
 ---
@@ -176,37 +202,13 @@ Object.__methods = {
 	getUniqueID = function(self)
 		return self.__uniqueID
 	end,
-	hasAttribute = function(self, attribute)
-		return self.__attributes[attribute.__uniqueID] and true or false
-	end,
-	as = function(self, attribute)
-		if not Object.__methods.hasAttribute(self, attribute) then
-			error("Object.as: 'self' does not contain '"..tostring(attribute).."'") end
-		return attribute.__up(self)
-	end,
 }
----
-Object.__up = function(self)
-	local __uniqueID, __attributes = self.__uniqueID, self.__attributes
-	for i,v in pairs(self) do self[i] = nil end
-	self.__uniqueID, self.__attributes, self.__attributeName = __uniqueID, __attributes, Object.__attributeName
-
-	setmetatable(self, self.__attributes[Object.__uniqueID].__meta)
-	for i,v in pairs(self.__attributes[Object.__uniqueID].__methods) do self[i] = v end
-end
 ---
 Object.new = function()
 	local o = {}
-	o.__attributes = {}
 	o.__uniqueID = string.sub(tostring(o), 8)
-
-	o.__attributes[Object.__uniqueID] = {
-		__methods = concealmethods(Object.__methods, o),
-		__meta = table.merge({}, Object.__meta),
-	}
-
-	Object.__up(o)
-
+	o.__attributeName = 'Object'
+	addindex(o, { Object })
 	return o
 end
 
@@ -215,24 +217,20 @@ end
 List = createattribute('List', {})
 ---
 List.__meta = {
-	__index = function(self, key)
-		if type(key) ~= 'number' then return end
-		return self.__attributes[List.__uniqueID].values[key]
-	end,
 	__newindex = function(self, key, value)
 		if type(key) ~= 'number' then return end
-		self.__attributes[List.__uniqueID].values[key] = value
+		self.List_values[key] = value
 	end,
 	__len = function(self)
-		return #self.__attributes[List.__uniqueID].values
+		return #self.List_values
 	end,
 	__add = function(self, value)
 		if type(value) ~= 'table' then
 			value = { value }
 		end
-		local result = self.__attributes[List.__uniqueID].__methods.clone()
-		for i=1,#value do
-			result.append(value[i])
+		local result = List.__methods.clone(self)
+		for i=1, #value do
+			result:append(value[i])
 		end
 		return result
 	end,
@@ -245,12 +243,12 @@ List.__meta = {
 		end
 		local result = List.new()
 		for _ in range(times) do
-			result.append(self.__attributes[List.__uniqueID].values)
+			result:append(self.List_values)
 		end
 		return result
 	end,
 	__tostring = function(self)
-		return self.__attributeName..': '..tostring(self.__attributes[List.__uniqueID].__methods.show())
+		return self.__attributeName..': '..tostring(List.__methods.show(self))
 	end,
 }
 ---
@@ -258,24 +256,28 @@ List.__methods = {
 	clone = function(self)
 		if not self then error("List: missing 'self', call using ':'") end
 		local result = List.new()
-		for v in eachs(self.__attributes[List.__uniqueID].values) do
-			result.append(v)
+		for v in eachs(self.List_values) do
+			result:append(v)
 		end
 		return result
 	end,
 	show = function(self)
 		if not self then error("List: missing 'self', call using ':'") end
 		local result = '[ '
-		for v in eachs(self.__attributes[List.__uniqueID].values) do
+		for v in eachs(self.List_values) do
 			result = result..string.format('%s , ',tostring(v))
 		end
 		result = string.sub(result,1,string.len(result)-3)..' ]'
 		return result
 	end,
+	get = function(self, key)
+		if type(key) ~= 'number' then return end
+		return self.List_values[key]
+	end,
 	append = function(self, value, index)
 		if not self then error("List: missing 'self', call using ':'") end
 		if not value then error("List: missing 'value'") end
-		local this = self.__attributes[List.__uniqueID].values
+		local this = self.List_values
 		index = index or #this + 1
 		if type(value) ~= 'table' then
 			value = {value}
@@ -289,7 +291,7 @@ List.__methods = {
 	end,
 	remove = function(self, index, length)
 		if not self then error("List: missing 'self', call using ':'") end
-		local this = self.__attributes[List.__uniqueID].values
+		local this = self.List_values
 		index = index or #this
 		length = length or 1
 		for i in range(length) do
@@ -299,7 +301,7 @@ List.__methods = {
 	end,
 	inter = function(self, ...)
 		if not self then error("List: missing 'self', call using ':'") end
-		local this = self.__attributes[List.__uniqueID].values
+		local this = self.List_values
 		local start = select('1', ...) or 1
 		local stop = select('2', ...) or #this
 		local step = select('3', ...) or 1
@@ -307,35 +309,18 @@ List.__methods = {
 	end,
 	sort = function(self, comp)
 		if not self then error("List: missing 'self', call using ':'") end
-		table.sort(self.__attributes[List.__uniqueID].values, comp)
+		table.sort(self.List_values, comp)
 		return self
 	end,
 }
----
-List.__up = function(self)
-	Object.__up(self)
-
-	self.__attributeName = List.__attributeName
-
-	for i,v in pairs(self.__attributes[List.__uniqueID].__methods) do
-		self[i] = v
-	end
-
-	addmetatable(self, self.__attributes[List.__uniqueID].__meta, true)
-end
 ---
 List.new = function()
 	local o = Object.new()
 
 	o.__attributeName = List.__attributeName
+	o.List_values = {}
 
-	o.__attributes[List.__uniqueID] = {
-		__methods = concealmethods(List.__methods, o),
-		__meta = table.merge({}, List.__meta),
-		values = {},
-	}
-
-	List.__up(o)
+	addindex(o, { List, List.__methods.get })
 
 	return o
 end
@@ -348,7 +333,7 @@ List.create = function(iterFunction, modifyFunction)
 	local result = List.new()
 	local value = iterFunction()
 	while value ~= nil do
-		result.append(modifyFunction(value))
+		result:append(modifyFunction(value))
 		value = iterFunction()
 	end
 	return result
