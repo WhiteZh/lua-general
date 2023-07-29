@@ -24,9 +24,15 @@ range = function(...)
 		step = select('3', ...)
 	end
 
-	start = math.floor(start)
-	stop = math.floor(stop)
-	step = math.floor(step)
+	if start % 1 ~= 0 then
+		error('range: start is not a whole number')
+	end
+	if stop % 1 ~= 0 then
+		error('range: stop is not a whole number')
+	end
+	if step % 1 ~= 0 then
+		error('range: step is not a whole number')
+	end
 
 	local iter = start - step
 	local up = step > 0
