@@ -1,10 +1,10 @@
 require 'lua-general'
 
-statistic = createpackage('lua-general/statistic', {})
+local statistic = {}
 
 statistic.mean = function(list)
     local sum = 0
-    for v in eachs(list) do
+    for v in each(list) do
         sum = sum + v
     end
     return sum / #list
@@ -45,15 +45,15 @@ statistic.q3 = function(list)
 end
 
 statistic.mode = function(list)
-    local list = List:new(list):sort()
-    local modes = List:new()
+    local list = list:new(list):sort()
+    local modes = list:new()
     local max = 2
     local count = 0
     local crt
-    for v in eachs(list) do
+    for v in each(list) do
         if crt ~= v then
             if count > max then
-                modes = List:new()
+                modes = list:new()
                 max = count
             end
             if count == max then
@@ -65,13 +65,13 @@ statistic.mode = function(list)
         count = count + 1
     end
     if count > max then
-        modes = List:new()
+        modes = list:new()
         max = count
     end
     if count == max then
         modes:append(crt)
     end
-    return #modes * max == #list and List:new() or modes
+    return #modes * max == #list and list:new() or modes
 end
 
 statistic.ir = function(list)
@@ -102,7 +102,7 @@ end
 
 
 statistic.show = function(list)
-    print(List.show(list))
+    print(list.show(list))
 end
 
 statistic.anal = function(list)
