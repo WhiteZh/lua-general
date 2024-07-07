@@ -1,26 +1,18 @@
 
----@param start number|nil from (inclusive); whole number only (otherwise be floored); default: 1
----@param stop number to (inclusive); whole number only (otherwise be floored)
----@param step number|nil increase/decrease per iteration; whole number only (otherwise be floored); default: 1
----@return function iterator
-function _G.range(...)
-	local paramCount = select('#', ...)
-	local start, stop, step
-
-	if paramCount == 0 then
+---@overload fun(stop: integer): function
+---@overload fun(start: integer, stop: integer): function
+---@overload fun(start: integer, stop: integer, step: integer): function
+---@param start integer|nil
+---@param stop integer
+---@param step integer|nil
+---@return function
+function _G.range(start, stop, step)
+	if start == nil then
 		error("missing 'stop'")
-	elseif paramCount == 1 then
-		start = 1
-		stop = select(1, ...)
-		step = 1
-	elseif paramCount == 2 then
-		start = select(1, ...)
-		stop = select(2, ...)
+	elseif stop == nil then
+		start, stop, step = 1, start, 1
+	elseif step == nil then
 		step = start < stop and 1 or -1
-	else
-		start = select(1, ...)
-		stop = select(2, ...)
-		step = select(3, ...)
 	end
 
 	if start % 1 ~= 0 then
@@ -66,19 +58,15 @@ function os.cls()
 	os.execute('cls')
 end
 
+---@overload fun(table1: table, table2: table): table
+---@overload fun(table1: table, table2: table, soft: boolean): table
 ---@param table1 table table to be merged
 ---@param table2 table table merges into
 ---@param soft boolean|nil soft merge (not to overwrite existed); default: false
 ---@return table merged table
 function table.merge(table1, table2, soft)
-	if soft then
-		for k,v in pairs(table2) do
-			if table1[k] == nil then
-				table1[k] = v
-			end
-		end
-	else
-		for k,v in pairs(table2) do
+	for k,v in pairs(table2) do
+		if table1[k] == nil or not soft then
 			table1[k] = v
 		end
 	end
@@ -92,12 +80,13 @@ function table.clone(_table)
 end
 
 
----@class List
 List = {}
-List.__index = List;
+setmetatable(List, List)
+---@class List
+List.prototype = {}
 ---@return List
 function List.new()
-	local self = setmetatable({}, List)
+	local self = setmetatable({}, List.prototype)
 
 	return self
 end
@@ -116,22 +105,30 @@ function List.create(iterFunction, modifyFunction)
 
 	return self
 end
----@param list table|nil
+---@param list table
 ---@return List
 function List.from(list)
 	local self = List.new()
-	if list then
-		for i,v in ipairs(list) do
-			self[i] = v
-		end
+	if not list then error("'list' not provided") end
+	for i,v in ipairs(list) do
+		self[i] = v
 	end
 	return self
 end
-setmetatable(List, { __call = List.from })
+---@return List
+function List:__call(...)
+	local argc = select('#', ...)
+	local ls = {}
+	for i = 1, argc do
+		ls[i] = select(i, ...)
+	end
+	return List.from(ls)
+end
 
+List.prototype.__index = List.prototype
 ---@param value table
 ---@return List
-function List:__add(value)
+function List.prototype:__add(value)
 	if type(value) ~= 'table' then
 		error("'table' is not table type")
 	end
@@ -139,9 +136,9 @@ function List:__add(value)
 	result:join(value)
 	return result
 end
----@param times number
+---@param times integer
 ---@return List
-function List:__mul(times)
+function List.prototype:__mul(times)
 	if type(times) ~= 'number' then
 		error('must be a number!')
 	end
@@ -155,12 +152,12 @@ function List:__mul(times)
 	return result
 end
 ---@return string
-function List:__tostring()
+function List.prototype:__tostring()
 	return self:show()
 end
 
 ---@return List
-function List:clone()
+function List.prototype:clone()
 	if not self then error("List: missing 'self', call using ':'") end
 	local result = List.new()
 	for v in each(self) do
@@ -169,7 +166,7 @@ function List:clone()
 	return result
 end
 ---@return string
-function List:show()
+function List.prototype:show()
 	if not self then error("List: missing 'self', call using ':'") end
 	local result = '[ '
 	for v in each(self) do
@@ -181,7 +178,7 @@ end
 ---@param value table
 ---@param index number|nil
 ---@return List
-function List:join(value, index)
+function List.prototype:join(value, index)
 	if not self then error("List: missing 'self', call using ':'") end
 	if not value then error("List: missing 'value'") end
 	index = index or #self + 1
@@ -196,7 +193,7 @@ end
 ---@param index number|nil
 ---@param length number|nil
 ---@return List
-function List:remove(index, length)
+function List.prototype:remove(index, length)
 	if not self then error("List: missing 'self', call using ':'") end
 	index = index or #self
 	length = length or 1
@@ -208,14 +205,14 @@ end
 ---@param value any
 ---@param index number|nil
 ---@return List
-function List:append(value, index)
+function List.prototype:append(value, index)
 	return self:join({value}, index)
 end
 ---@param start number|nil
 ---@param stop number|nil
 ---@param step number|nil
 ---@return List
-function List:inter(start, stop, step)
+function List.prototype:inter(start, stop, step)
 	if not self then error("List: missing 'self', call using ':'") end
 	local start = start or 1
 	local stop = stop or #self
@@ -224,7 +221,7 @@ function List:inter(start, stop, step)
 end
 ---@param comp function
 ---@return List
-function List:sort(comp)
+function List.prototype:sort(comp)
 	if not self then error("List: missing 'self', call using ':'") end
 	if not comp then error("List: missing 'comp'") end
 	table.sort(self, comp)
