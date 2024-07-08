@@ -1,12 +1,12 @@
 ---@alias notnil (boolean|number|string|table|function|thread|userdata|lightuserdata)
 
----@overload fun(stop: integer): function
----@overload fun(start: integer, stop: integer): function
----@overload fun(start: integer, stop: integer, step: integer): function
----@param start integer|nil
+
+---@overload fun(stop: integer): fun(): integer|nil
+---@overload fun(start: integer, stop: integer): fun(): integer|nil
+---@param start integer
 ---@param stop integer
----@param step integer|nil
----@return function
+---@param step integer
+---@return fun(): integer|nil
 function _G.range(start, stop, step)
 	if start == nil then
 		error("missing 'stop'")
@@ -41,7 +41,7 @@ function _G.range(start, stop, step)
 end
 
 ---@param list table list
----@return function iterator
+---@return fun(): notnil|nil
 function _G.each(list)
 	if not list then error("_G.each: missing 'list'") end
 	local index = 0
@@ -59,11 +59,9 @@ function os.cls()
 	os.execute('cls')
 end
 
----@overload fun(table1: table, table2: table): table
----@overload fun(table1: table, table2: table, soft: boolean): table
 ---@param table1 table table to be merged
 ---@param table2 table table merges into
----@param soft boolean|nil soft merge (not to overwrite existed); default: false
+---@param soft? boolean soft merge (not to overwrite existed); default: false
 ---@return table merged table
 function table.merge(table1, table2, soft)
 	for k,v in pairs(table2) do
@@ -176,23 +174,23 @@ function List.prototype:show()
 	result = string.sub(result,1,string.len(result)-3)..' ]'
 	return result
 end
----@param value table
----@param index number|nil
+---@param list table
+---@param index? number
 ---@return List
-function List.prototype:join(value, index)
+function List.prototype:join(list, index)
 	if not self then error("List: missing 'self', call using ':'") end
-	if not value then error("List: missing 'value'") end
+	if not list then error("List: missing 'value'") end
 	index = index or #self + 1
-	if type(value) ~= 'table' then
+	if type(list) ~= 'table' then
 		error("'value' is not table type")
 	end
-	for i,v in ipairs(value) do
+	for i,v in ipairs(list) do
 		table.insert(self, index+i-1, v)
 	end
 	return self
 end
----@param index number|nil
----@param length number|nil
+---@param index? integer
+---@param length? integer
 ---@return List
 function List.prototype:remove(index, length)
 	if not self then error("List: missing 'self', call using ':'") end
@@ -203,15 +201,15 @@ function List.prototype:remove(index, length)
 	end
 	return self
 end
----@param value any
----@param index number|nil
+---@param value notnil
+---@param index? integer
 ---@return List
 function List.prototype:append(value, index)
 	return self:join({value}, index)
 end
----@param start number|nil
----@param stop number|nil
----@param step number|nil
+---@param start? integer
+---@param stop? integer
+---@param step? integer
 ---@return List
 function List.prototype:inter(start, stop, step)
 	if not self then error("List: missing 'self', call using ':'") end
@@ -278,7 +276,7 @@ function Set.prototype:contains(item)
 		return false
 	end
 end
----@return fun(): notnil?
+---@return fun(): notnil|nil
 function Set.prototype:items()
 	return coroutine.wrap(function()
 		local k = next(self.data, nil)
