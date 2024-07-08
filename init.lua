@@ -1,3 +1,4 @@
+---@alias notnil (boolean|number|string|table|function|thread|userdata|lightuserdata)
 
 ---@overload fun(stop: integer): function
 ---@overload fun(start: integer, stop: integer): function
@@ -226,4 +227,64 @@ function List.prototype:sort(comp)
 	if not comp then error("List: missing 'comp'") end
 	table.sort(self, comp)
 	return self
+end
+
+
+
+Set = {}
+setmetatable(Set, Set)
+---@class Set
+---@field data table
+Set.prototype = {}
+---@return Set
+function Set.new()
+	local self = setmetatable({}, Set.prototype)
+
+	self.data = {}
+
+	return self
+end
+---@param items table
+---@return Set
+function Set.from(items)
+	local self = Set.new()
+
+	for item in each(items) do
+		self:insert(item)
+	end
+
+	return self
+end
+
+Set.prototype.__index = Set.prototype
+---@param item notnil
+---@return Set
+function Set.prototype:insert(item)
+	self.data[item] = true
+	return self
+end
+---@param item notnil
+---@return Set
+function Set.prototype:remove(item)
+	self.data[item] = nil
+	return self
+end
+---@param item notnil
+---@return boolean
+function Set.prototype:contains(item)
+	if self.data[item] then
+		return true
+	else
+		return false
+	end
+end
+---@return fun(): notnil?
+function Set.prototype:items()
+	return coroutine.wrap(function()
+		local k = next(self.data, nil)
+		while k do
+			coroutine.yield(k)
+			k = next(self.data, k)
+		end
+	end)
 end
