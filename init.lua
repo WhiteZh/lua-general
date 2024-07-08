@@ -253,23 +253,38 @@ function Set.from(items)
 
 	return self
 end
+---@return Set
+function Set:__call(...)
+	local items = {}
+	for i = 1, select('#', ...) do
+		items[i] = select(i, ...)
+	end
+	return Set.from(items)
+end
 
 Set.prototype.__index = Set.prototype
+---@return string
+function Set.prototype:__tostring()
+	return self:show()
+end
 ---@param item notnil
 ---@return Set
 function Set.prototype:insert(item)
+	if not self then error("Set: missing 'self', call using ':'") end
 	self.data[item] = true
 	return self
 end
 ---@param item notnil
 ---@return Set
 function Set.prototype:remove(item)
+	if not self then error("Set: missing 'self', call using ':'") end
 	self.data[item] = nil
 	return self
 end
 ---@param item notnil
 ---@return boolean
 function Set.prototype:contains(item)
+	if not self then error("Set: missing 'self', call using ':'") end
 	if self.data[item] then
 		return true
 	else
@@ -278,6 +293,7 @@ function Set.prototype:contains(item)
 end
 ---@return fun(): notnil|nil
 function Set.prototype:items()
+	if not self then error("Set: missing 'self', call using ':'") end
 	return coroutine.wrap(function()
 		local k = next(self.data, nil)
 		while k do
@@ -285,4 +301,14 @@ function Set.prototype:items()
 			k = next(self.data, k)
 		end
 	end)
+end
+---@return string
+function Set.prototype:show()
+	if not self then error("Set: missing 'self', call using ':'") end
+	local result = '{ '
+	for v in self:items() do
+		result = result..string.format('%s , ',tostring(v))
+	end
+	result = string.sub(result,1,string.len(result)-3)..' }'
+	return result
 end
